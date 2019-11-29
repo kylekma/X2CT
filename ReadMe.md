@@ -70,8 +70,6 @@ CTGAN/:
    |    |--multiView_CTGAN/: single view X-Ray to CT model
    |    |--singleView_CTGAN/: Biplanar X-Rays to CT model
    |
-   |--images/: markdown support images
-   |
    |--test.py: test script that demonstrates the inference workflow and outputs the metric results
    |--train.py: training script that trains models
    |--visual.py: same working mechanism as test.py but viualizing the output instead of calculating the statistics 
@@ -84,6 +82,7 @@ XRAY_TRANSFER/: (Will be released soon.) Cycle-gan based pipeline to make the sy
    |--
    |--
    |--
+images/: markdown support images
 LICENSE
 README.md
 ```
