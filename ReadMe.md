@@ -5,7 +5,7 @@
 This is the official code release of the 2019 CVPR paper <a href="https://arxiv.org/abs/1905.06902">X2CT-GAN: Reconstructing CT from Biplanar X-Rays with Generative Adversarial Networks</a>. In the original paper, we proposed a novel method to reconstruct CT from two orthogonal X-Ray images using the generative adversarial network (GAN). A specially designed generator network is exploited to increase data dimension from 2D (X-Rays) to 3D (CT), which has not been addressed in previous research works. In this code release, we provide the complete source codes, trained models and related LIDC data that are used in our experiments, which may help you validate our method as well as several baselines. You can also use the source code to process the data and retrain all the networks. 
 
 <div align=center>
-<img src="./images/motivation-1.png" width="600"/>
+<img src="./images/workflow.png" width="600"/>
 </div>
 
 ### License
