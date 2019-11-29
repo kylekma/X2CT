@@ -5,7 +5,7 @@
 This is the official code release of the 2019 CVPR paper <a href="https://arxiv.org/abs/1905.06902">X2CT-GAN: Reconstructing CT from Biplanar X-Rays with Generative Adversarial Networks</a>. In the original paper, we proposed a novel method to reconstruct CT from two orthogonal X-Ray images using the generative adversarial network (GAN). A specially designed generator network is exploited to increase data dimension from 2D (X-Rays) to 3D (CT), which has not been addressed in previous research works. In this code release, we provide the complete source codes, trained models and related LIDC data that are used in our experiments, which may help you validate our method as well as several baselines. You can also use the source code to process the data and retrain all the networks. 
 
 <div align=center>
-<img src="D:/images/motivation-1.png" width="600"/>
+<img src="./images/motivation-1.png" width="600"/>
 </div>
 
 ### License
@@ -76,9 +76,6 @@ CTGAN/:
    |--train.py: training script that trains models
    |--visual.py: same working mechanism as test.py but viualizing the output instead of calculating the statistics 
    |--requirements.txt: python dependency libraries
-   |--LICENSE
-   |--README.md
-   |
 CT2XRAY/: (Will be released soon.) Convert CT volume to X-Ray images that are used as the training input.
    |--
    |--
@@ -87,6 +84,8 @@ XRAY_TRANSFER/: (Will be released soon.) Cycle-gan based pipeline to make the sy
    |--
    |--
    |--
+LICENSE
+README.md
 ```
 
 ## Demo
@@ -128,7 +127,7 @@ Please use the following example settings to train your model.
 ----
 Qualitative results from our original paper. 
 <div align=center>
-<img src="D:/images/results.png" width="600"/>
+<img src="./images/results.png" width="600"/>
 </div>
 
 ## TODO
