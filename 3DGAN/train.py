@@ -1,3 +1,9 @@
+# ------------------------------------------------------------------------------
+# Copyright (c) Tencent
+# Licensed under the GPLv3 License.
+# Created by Kai Ma (makai0324@gmail.com)
+# ------------------------------------------------------------------------------
+
 import argparse
 from lib.config.config import cfg_from_yaml, cfg, merge_dict_and_yaml, print_easy_dict
 from lib.dataset.factory import get_dataset
