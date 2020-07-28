@@ -135,7 +135,7 @@ Qualitative results from our original paper.
 - [x] Testing code example and script of the algorithm
 - [x] Visualization code example and script of the algorithm
 - [x] Pre-processed LIDC data upload to cloud (70G, training and test data used in the CVPR work)
-- [ ] Source code to generate synthesized X-Rays from CT volumes
+- [x] Source code to generate synthesized X-Rays from CT volumes
 - [ ] Source code to generate realistic X-Rays by using CycleGAN
 
 ## Acknowledgement
