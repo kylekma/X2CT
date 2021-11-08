@@ -44,7 +44,7 @@ year = {2019}}
 - pip install -r requirements.txt
 - Install pytorch 0.41 or above
 - Make sure CUDA and cudnn are installed
-- Download preprocessed dataset and our model files: <a href="https://share.weiyun.com/5xRVfvP">weiyun</a>
+- Download preprocessed dataset and our model files: <a href="https://share.weiyun.com/5xRVfvP">weiyun</a> or <a href="https://www.dropbox.com/sh/06r3g02dyeyh5x5/AADFhwRuG_SPuGGwKx-SZLrna?dl=0">dropbox</a>
 - Download the source code and put the data file to the right location according to the code structure below
 
 ## Structure
