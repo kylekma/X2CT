@@ -108,9 +108,9 @@ __C.TRAIN.nThreads = 5
 # learning rate policy: lambda|step|plateau
 __C.TRAIN.lr_policy = 'lambda'
 # of iter at starting learning rate
-__C.TRAIN.niter = 100
+__C.TRAIN.niter = 20
 # of iter to linearly decay learning rate to zero
-__C.TRAIN.niter_decay = 100
+__C.TRAIN.niter_decay = 20
 # multiply by a gamma every lr_decay_iters iterations
 __C.TRAIN.lr_decay_iters = 50
 # frequency of showing training results on console
