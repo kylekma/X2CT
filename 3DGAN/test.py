@@ -3,6 +3,8 @@
 # Licensed under the GPLv3 License.
 # Created by Kai Ma (makai0324@gmail.com)
 # ------------------------------------------------------------------------------
+import os 
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 import argparse
 from lib.config.config import cfg_from_yaml, cfg, merge_dict_and_yaml, print_easy_dict
@@ -15,7 +17,8 @@ import copy
 import tqdm
 import torch
 import numpy as np
-import os
+
+
 
 
 def parse_args():

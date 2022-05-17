@@ -6,7 +6,8 @@
 
 import numpy as np
 import numpy.linalg as linalg
-from skimage.measure import compare_ssim as SSIM
+
+from skimage.metrics import structural_similarity as SSIM
 
 ##############################################
 '''
@@ -14,7 +15,7 @@ from skimage.measure import compare_ssim as SSIM
 '''
 ##############################################
 
-
+##from skimage.measure import compare_ssim as SSIM
 def MAE(arr1, arr2, size_average=True):
   '''
   :param arr1:

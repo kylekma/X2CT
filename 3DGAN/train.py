@@ -3,7 +3,8 @@
 # Licensed under the GPLv3 License.
 # Created by Kai Ma (makai0324@gmail.com)
 # ------------------------------------------------------------------------------
-
+import os 
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 import argparse
 from lib.config.config import cfg_from_yaml, cfg, merge_dict_and_yaml, print_easy_dict
 from lib.dataset.factory import get_dataset
@@ -11,7 +12,7 @@ from lib.model.factory import get_model
 import copy
 import torch
 import time
-import os
+
 
 
 def parse_args():
