@@ -46,14 +46,30 @@ class AlignDataSet(Base_DataSet):
     return img_path
 
   def load_file(self, file_path):
+    #assume that 0th index for ct and xray files refer to same person, doublecheck
+
     hdf5 = h5py.File(file_path, 'r')
     ct_data = np.asarray(hdf5['ct'])
+
+    
     x_ray1 = np.asarray(hdf5['xray1'])
     x_ray2 = np.asarray(hdf5['xray2'])
     x_ray1 = np.expand_dims(x_ray1, 0)
     x_ray2 = np.expand_dims(x_ray2, 0)
+
+
+    template_ct = ct_data[0] #extract ct one for person that will act as template
+    template_x_ray1 = x_ray1[0]
+    template_x_ray2 = x_ray2[0]
+
+    x_ray1 = x_ray1[1:len(x_ray1)+1]
+    x_ray2 = x_ray2[1:len(x_ray2)+1]
+    ct_data = ct_data[1:len(ct_data)+1]
+    
+    template_data = {"template_ct":template_ct,"template_x_ray1":template_x_ray1,"template_x_ray2":template_x_ray2}
     hdf5.close()
-    return ct_data, x_ray1, x_ray2
+    return ct_data, x_ray1, x_ray2, template_data
+
 
   '''
   generate batch

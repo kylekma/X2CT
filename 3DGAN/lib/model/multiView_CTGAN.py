@@ -139,6 +139,7 @@ class CTGAN(Base_Model):
   def set_input(self, input):
     self.G_input1 = input[1][0].to(self.device)
     self.G_input2 = input[1][1].to(self.device)
+    self.G_input3 = input[1][2].to(self.device)
     self.G_real = input[0].to(self.device)
     self.image_paths = input[2:]
 
@@ -213,7 +214,7 @@ class CTGAN(Base_Model):
     self.G_real is GT object
     '''
     # G_fake_D is [B 1 D H W]
-    self.G_fake_D1, self.G_fake_D2, self.G_fake_D = self.netG([self.G_input1, self.G_input2])
+    self.G_fake_D1, self.G_fake_D2, self.G_fake_D = self.netG([self.G_input1, self.G_input2, self.G_input3])
     # visual object should be [B D H W]
     self.G_fake = torch.squeeze(self.G_fake_D, 1)
     # input of Discriminator is [B 1 D H W]
