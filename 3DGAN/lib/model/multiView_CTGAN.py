@@ -139,8 +139,12 @@ class CTGAN(Base_Model):
   def set_input(self, input):
     self.G_input1 = input[1][0].to(self.device)
     self.G_input2 = input[1][1].to(self.device)
-    self.G_input3 = input[1][2].to(self.device)
+    template = input[3]
+    self.G_input3 = template
+
+ 
     self.G_real = input[0].to(self.device)
+    
     self.image_paths = input[2:]
 
   # map function

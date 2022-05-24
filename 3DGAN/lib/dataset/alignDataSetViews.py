@@ -47,6 +47,9 @@ class AlignDataSet(Base_DataSet):
 
   def load_file(self, file_path):
     #assume that 0th index for ct and xray files refer to same person, doublecheck
+    #problem is that there are only 1 och each xray here and 256 isch CT scans when we load
+    #problem 2, given that there are only 2 xrays make sure that we do not reconstruct xrays thorugh DDR on the template CT
+    #Solution: remove x-rays from template. Only take out 1 CT scan and remove CT scan from training data.
 
     hdf5 = h5py.File(file_path, 'r')
     ct_data = np.asarray(hdf5['ct'])
@@ -54,34 +57,48 @@ class AlignDataSet(Base_DataSet):
     
     x_ray1 = np.asarray(hdf5['xray1'])
     x_ray2 = np.asarray(hdf5['xray2'])
+
     x_ray1 = np.expand_dims(x_ray1, 0)
     x_ray2 = np.expand_dims(x_ray2, 0)
+    #extract ct one for person that will act as template
 
+   
 
-    template_ct = ct_data[0] #extract ct one for person that will act as template
-    template_x_ray1 = x_ray1[0]
-    template_x_ray2 = x_ray2[0]
-
-    x_ray1 = x_ray1[1:len(x_ray1)+1]
-    x_ray2 = x_ray2[1:len(x_ray2)+1]
-    ct_data = ct_data[1:len(ct_data)+1]
     
-    template_data = {"template_ct":template_ct,"template_x_ray1":template_x_ray1,"template_x_ray2":template_x_ray2}
+
+
+    ct_data = ct_data[:len(ct_data)+1]
+
     hdf5.close()
-    return ct_data, x_ray1, x_ray2, template_data
+    return ct_data, x_ray1, x_ray2
+
+    
 
 
   '''
   generate batch
   '''
   def pull_item(self, item):
-    file_path = self.get_image_path(self.dir_root, self.dataset_paths[item])
+    file_path = self.get_image_path(self.dir_root, self.dataset_paths[item]) 
     ct_data, x_ray1, x_ray2 = self.load_file(file_path)
+    #print(template_data)
 
     # Data Augmentation
     ct, xray1, xray2 = self.data_augmentation([ct_data, x_ray1, x_ray2])
+    template = ct[0]
+    ct = ct[1:len(ct)]
 
-    return ct, xray1, xray2, file_path
+
+
+#    for idx, e in enumerate(x_ray1):
+ #       print("Xray " + str(idx) + "\n")
+  #  print(e)
+   # print("LENGTH X1: "+ str(len(xray1)) +"LENGTH X2´"+ str(len(xray2)) + "LENGTH CT: " + str(len(ct)))
+    #Data Augmentation for template
+    #template_data["template_ct"],template_data["template_x_ray1"],template_data["template_x_ray2"] = self.data_augmentation([template_data["template_ct"], template_data["template_x_ray1"],template_data["template_x_ray2"]])
+  
+
+    return ct, xray1, xray2, file_path, template
 
 
 
