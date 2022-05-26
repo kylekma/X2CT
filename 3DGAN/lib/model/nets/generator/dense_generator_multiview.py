@@ -263,7 +263,7 @@ class MultiView_UNetLike_DenseDimensionNet(nn.Module):
 
   
   def forward(self, input):
-    # only support two views
+    # only support two views 
     assert len(input) == 3
     # View 1 encoding process
     view1_encoder_feature = self.view1Model.encoder_layer(input[0])

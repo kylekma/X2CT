@@ -141,11 +141,20 @@ class CTGAN(Base_Model):
     self.G_input2 = input[1][1].to(self.device)
     template = input[3]
     self.G_input3 = template
-
+    
+ 
+    #print("THIS IS TEMPLATE OF SIZE " + str(len(template)))
+    #for e in template:
+    #  print(e.size())
+    #  break
+  
  
     self.G_real = input[0].to(self.device)
+    print(self.G_real.size())
     
     self.image_paths = input[2:]
+    
+ 
 
   # map function
   def output_map(self, v, dim):
