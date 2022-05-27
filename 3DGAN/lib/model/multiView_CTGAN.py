@@ -139,21 +139,23 @@ class CTGAN(Base_Model):
   def set_input(self, input):
     self.G_input1 = input[1][0].to(self.device)
     self.G_input2 = input[1][1].to(self.device)
-    template = input[3]
+    template = input[3][0]
+    template = torch.tensor(template)
+    template = torch.unsqueeze(template,dim=0)
+    template = template.to(self.device)
+
     self.G_input3 = template
-    
- 
-    #print("THIS IS TEMPLATE OF SIZE " + str(len(template)))
-    #for e in template:
-    #  print(e.size())
-    #  break
   
+
  
     self.G_real = input[0].to(self.device)
-    print(self.G_real.size())
+    #print("dtype of REAL")
+    #print(self.G_real.dtype)
+    #print(" this is size of real CT probably "+ str(self.G_real.size()))
+    #print("this is size of template " + str(template.size()))
     
-    self.image_paths = input[2:]
-    
+    self.image_paths = input[2]
+
  
 
   # map function

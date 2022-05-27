@@ -52,13 +52,18 @@ class AlignDataSet(Base_DataSet):
     file_path = os.path.join("./data/LIDC-HDF5-256","LIDC-IDRI-0936.20000101.5169.2.1",'ct_xray_data'+self.ext)
     hdf5 = h5py.File(file_path, 'r')
     ct_data = np.asarray(hdf5['ct'])
+    x_ray1 = np.asarray(hdf5['xray1'])
+    x_ray2 = np.asarray(hdf5['xray2'])
+    x_ray1 = np.expand_dims(x_ray1, 0)
+    x_ray2 = np.expand_dims(x_ray2, 0)
     hdf5.close()
+    ct_data, x_ray1,x_ray2 = self.data_augmentation([ct_data, x_ray1, x_ray2])
     return ct_data
 
 
   def get_image_path(self, root, index_name):
-    print("root = " + str(root) + "/n")
-    print("index= " + str(index_name))
+    #print("root = " + str(root) + "/n")
+    #print("index= " + str(index_name))
     img_path = os.path.join(root, index_name, 'ct_xray_data'+self.ext)
     assert os.path.exists(img_path), 'Path do not exist: {}'.format(img_path)
     return img_path
