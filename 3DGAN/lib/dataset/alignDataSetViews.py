@@ -78,7 +78,7 @@ class AlignDataSet(Base_DataSet):
     #problem 2, given that there are only 2 xrays make sure that we do not reconstruct xrays thorugh DDR on the template CT
     #Solution: remove x-rays from template. Only take out 1 CT scan and remove CT scan from training data.
 
-    print(file_path)
+    #print(file_path)
 
     hdf5 = h5py.File(file_path, 'r')
     ct_data = np.asarray(hdf5['ct'])
