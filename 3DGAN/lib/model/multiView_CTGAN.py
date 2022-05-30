@@ -129,6 +129,8 @@ class CTGAN(Base_Model):
                                         lr=opt.lr, betas=(opt.beta1, opt.beta2))
     self.optimizer_D = torch.optim.Adam(self.netD.parameters(),
                                         lr=opt.lr, betas=(opt.beta1, opt.beta2))
+
+    #add optimizer for 3DUNet
     self.optimizers = []
     self.optimizers.append(self.optimizer_G)
     self.optimizers.append(self.optimizer_D)
