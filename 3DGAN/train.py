@@ -9,6 +9,7 @@ import argparse
 from lib.config.config import cfg_from_yaml, cfg, merge_dict_and_yaml, print_easy_dict
 from lib.dataset.factory import get_dataset
 from lib.model.factory import get_model
+from lib.model.multiView_AutoEncoder import ResUNet
 import copy
 import torch
 import time
@@ -121,6 +122,12 @@ if __name__ == '__main__':
   gan_model.init_process(opt)
   total_steps, epoch_count = gan_model.setup(opt)
 
+
+  autoencoder = ResUnet(in_channel=1,out_channel=1,training=True)
+
+  autoencoder.train()
+
+
   # set to train
   gan_model.train()
 
@@ -133,7 +140,9 @@ if __name__ == '__main__':
   # train discriminator more
   dataloader_iter_for_discriminator = iter(dataloader)
 
-  # train
+
+  #we need to add inout to optimize_paramets with output of autoencoder 
+  # OLD train NOW finetune 
   for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     epoch_start_time = time.time()
     iter_data_time = time.time()

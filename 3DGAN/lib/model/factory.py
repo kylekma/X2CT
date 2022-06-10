@@ -38,6 +38,7 @@ def get_model(dataset_name):
     return CTGAN
   elif dataset_name == 'MultiViewCTGAN':
     from .multiView_CTGAN import CTGAN
+    from multiView_AutoEncoder import ResUNet
     return CTGAN
   elif dataset_name == 'MultiViewCTDGAN':
     from .multiView_CTDGAN import CTGAN
