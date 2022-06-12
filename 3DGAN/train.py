@@ -13,6 +13,8 @@ from lib.model.multiView_AutoEncoder import ResUNet
 import copy
 import torch
 import time
+import torch.optim as optim
+from tqdm import tqdm
 
 
 
@@ -79,6 +81,8 @@ if __name__ == '__main__':
   opt = merge_dict_and_yaml(args.__dict__, opt)
   print_easy_dict(opt)
 
+  
+
   # add data_augmentation
   datasetClass, augmentationClass, dataTestClass, collateClass = get_dataset(opt.dataset_class)
   opt.data_augmentation = augmentationClass
@@ -113,6 +117,7 @@ if __name__ == '__main__':
     num_workers=int(opt.nThreads),
     collate_fn=collateClass)
 
+
   dataset_size = len(dataloader)
   print('#training images = %d' % dataset_size)
 
@@ -123,13 +128,62 @@ if __name__ == '__main__':
   total_steps, epoch_count = gan_model.setup(opt)
 
 
-  autoencoder = ResUnet(in_channel=1,out_channel=1,training=True)
+  autoencoder = ResUNet(in_channel=1,out_channel=1,training=True)
+
 
   autoencoder.train()
 
-
   # set to train
   gan_model.train()
+
+  pretrain_auto = {}
+  pretrain_auto["epoch"] = 3
+  pretrain_auto["batch"] = 30
+  pretrain_auto["loss"] = torch.nn.CrossEntropyLoss()
+  pretrain_auto["optimizer"] = optim.Adam(autoencoder.parameters())
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+  dataloader_auto = torch.utils.data.DataLoader(
+    dataset,
+    batch_size= 30,
+    shuffle=True,
+    num_workers=int(opt.nThreads),
+    collate_fn=collateClass)
+
+
+  #pretraining of autoencoder
+  for epoch in range(pretrain_auto["epoch"]):
+      correct = 0
+      for i, data in enumerate(dataloader_auto):
+        X = data[0].long()
+        print(X.size())
+        X = torch.unsqueeze(X,0)
+        print(X.size())
+        X = X.to(device)
+        
+        
+        pretrain_auto["optimizer"].zero_grad()
+        
+        predicts = autoencoder(X)
+        loss0 = pretrain_auto["loss"](predicts[0],X)
+        loss1 = pretrain_auto["loss"](predicts[1],X)
+        loss2 = pretrain_auto["loss"](predicts[2],X)
+        loss3 = pretrain_auto["loss"](predicts[3],X)
+        loss = loss3 + pretrain_auto["alpha"] *(loss0 + loss1 + loss2)
+        loss.backwards()
+        pretrain_auto["optimizer"].step()
+        if i % pretrain_auto["batch"] == 0:
+          print("Epoch: {}, Loss: {}, Batch {} ".format(epoch, loss,i))
+
+
+        
+
+ 
+    
+
+  
+
+
 
   # visualizer
   from lib.utils.visualizer import Visualizer

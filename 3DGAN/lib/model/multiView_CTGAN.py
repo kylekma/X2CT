@@ -131,9 +131,9 @@ class CTGAN(Base_Model):
                                         lr=opt.lr, betas=(opt.beta1, opt.beta2))
 
     #add optimizer for 3DUNet
-    self.optimizers = []
-    self.optimizers.append(self.optimizer_G)
-    self.optimizers.append(self.optimizer_D)
+    #self.optimizers = []
+    #self.optimizers.append(self.optimizer_G)
+    #self.optimizers.append(self.optimizer_D)
 
   '''
     Train -Forward and Backward
@@ -141,10 +141,12 @@ class CTGAN(Base_Model):
   def set_input(self, input):
     self.G_input1 = input[1][0].to(self.device)
     self.G_input2 = input[1][1].to(self.device)
+    #template is the pretraining template
     template = input[3][0]
     template = torch.tensor(template)
     template = torch.unsqueeze(template,dim=0)
     template = template.to(self.device)
+    #Set input from Autoencoder for the finetuning stage
 
     self.G_input3 = template
   
