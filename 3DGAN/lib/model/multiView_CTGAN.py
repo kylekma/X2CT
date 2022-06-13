@@ -151,8 +151,8 @@ class CTGAN(Base_Model):
     self.G_input3 = template
   
 
- 
     self.G_real = input[0].to(self.device)
+    #print(torch.sum(self.G_real))
     #print("dtype of REAL")
     #print(self.G_real.dtype)
     #print(" this is size of real CT probably "+ str(self.G_real.size()))
