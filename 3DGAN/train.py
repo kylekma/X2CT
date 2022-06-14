@@ -3,7 +3,9 @@
 # Licensed under the GPLv3 License.
 # Created by Kai Ma (makai0324@gmail.com)
 # ------------------------------------------------------------------------------
-import os 
+import os
+
+from tabnanny import verbose 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 import argparse
 from lib.config.config import cfg_from_yaml, cfg, merge_dict_and_yaml, print_easy_dict
@@ -15,8 +17,15 @@ import torch
 import time
 import torch.optim as optim
 from tqdm import tqdm
+#from logger import Logger
+#import sys
 
+"""
+def batch_learn(batch):
 
+  return 
+
+"""
 
 def parse_args():
   parse = argparse.ArgumentParser(description='CTGAN')
@@ -54,6 +63,9 @@ def parse_args():
   return args
 
 if __name__ == '__main__':
+  #sys.stdout = Logger()
+
+
   args = parse_args()
 
   # check gpu
@@ -123,7 +135,7 @@ if __name__ == '__main__':
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   autoencoder = ResUNet(in_channel=1,out_channel=1,training=True).to(device)
-
+  print(autoencoder)
 
   autoencoder.train()
 
@@ -133,9 +145,19 @@ if __name__ == '__main__':
   pretrain_auto = {}
   pretrain_auto["alpha"] = 0.4
   pretrain_auto["epoch"] = 3
-  pretrain_auto["batch"] = 30
+  #first batch size was 30
+  pretrain_auto["batch"] = 35
   pretrain_auto["loss"] = torch.nn.L1Loss().to(device)
-  pretrain_auto["optimizer"] = optim.Adam(autoencoder.parameters(),lr=0.0001)
+  #Gamma for next three items are 0.9
+  #0.0001 err 0.0744 epoch 0 batch 30
+  #0.00001 err 0.06 ep 0 batch 30 0.05-0.07
+  #lr = 0.0005 batch 35 err 0.043-0.05
+  #  
+  pretrain_auto["optimizer"] = optim.Adam(autoencoder.parameters(),lr=0.00005)
+
+  pretrain_auto["scheduler"] = optim.lr_scheduler.ExponentialLR(pretrain_auto["optimizer"],gamma=0.7, verbose=True)
+  #pretrain_auto["scheduler"] = optim.lr_scheduler.LamdaLR(pretrain_auto["optimizer"],batch_learn)
+
 
 
   dataloader_auto = torch.utils.data.DataLoader(
@@ -164,12 +186,13 @@ if __name__ == '__main__':
         loss1 = pretrain_auto["loss"](predicts[1],X)
         loss2 = pretrain_auto["loss"](predicts[2],X)
         loss3 = pretrain_auto["loss"](predicts[3],X)
-        print("\n loss0: {}, loss1: {}, loss2: {}, loss3: {} \n".format(loss0.item(),loss1.item(),loss2.item(),loss3.item()))
+        #print("\n loss0: {}, loss1: {}, loss2: {}, loss3: {} \n".format(loss0.item(),loss1.item(),loss2.item(),loss3.item()))
         loss = loss3 + pretrain_auto["alpha"] *(loss0 + loss1 + loss2)
         loss.backward()
         pretrain_auto["optimizer"].step()
         if i % pretrain_auto["batch"] == 0:
           print("\n Epoch: {}, Loss: {}, Batch {}\n ".format(epoch, loss.item(),i))
+      pretrain_auto["scheduler"].step()
 
 
         

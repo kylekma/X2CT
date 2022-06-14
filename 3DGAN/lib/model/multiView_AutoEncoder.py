@@ -4,6 +4,7 @@ This code is referenced from https://github.com/assassint2017/MICCAI-LITS2017
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+from turtle import forward
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -230,3 +231,115 @@ class ResUNet(Base_Model):
             return output1, output2, output3, output4
         else:
             return output4
+
+
+class ResUNet_Down(Base_Model):
+    def __init__(self, in_channel=1, out_channel=1 ,training=True):
+        super().__init__()
+
+        self.training = training
+        self.dorp_rate = 0.2
+
+        self.encoder_stage1 = nn.Sequential(
+            nn.Conv3d(in_channel, 16, 3, 1, padding=1),
+            nn.PReLU(16),
+
+            nn.Conv3d(16, 16, 3, 1, padding=1),
+            nn.PReLU(16),
+        )
+
+        self.encoder_stage2 = nn.Sequential(
+            nn.Conv3d(32, 32, 3, 1, padding=1),
+            nn.PReLU(32),
+
+            nn.Conv3d(32, 32, 3, 1, padding=1),
+            nn.PReLU(32),
+
+            nn.Conv3d(32, 32, 3, 1, padding=1),
+            nn.PReLU(32),
+        )
+
+        self.encoder_stage3 = nn.Sequential(
+            nn.Conv3d(64, 64, 3, 1, padding=1),
+            nn.PReLU(64),
+
+            nn.Conv3d(64, 64, 3, 1, padding=2, dilation=2),
+            nn.PReLU(64),
+
+            nn.Conv3d(64, 64, 3, 1, padding=4, dilation=4),
+            nn.PReLU(64),
+        )
+
+        self.encoder_stage4 = nn.Sequential(
+            nn.Conv3d(128, 128, 3, 1, padding=3, dilation=3),
+            nn.PReLU(128),
+
+            nn.Conv3d(128, 128, 3, 1, padding=4, dilation=4),
+            nn.PReLU(128),
+
+            nn.Conv3d(128, 128, 3, 1, padding=5, dilation=5),
+            nn.PReLU(128),
+        )
+
+        self.down_conv1 = nn.Sequential(
+            nn.Conv3d(16, 32, 2, 2),
+            nn.PReLU(32)
+        )
+
+        self.down_conv2 = nn.Sequential(
+            nn.Conv3d(32, 64, 2, 2),
+            nn.PReLU(64)
+        )
+
+        self.down_conv3 = nn.Sequential(
+            nn.Conv3d(64, 128, 2, 2),
+            nn.PReLU(128)
+        )
+
+        self.down_conv4 = nn.Sequential(
+            nn.Conv3d(128, 256, 3, 1, padding=1),
+            nn.PReLU(256)
+        )
+
+        
+    @property
+    def name(self):
+        return 'multiView_AutoEncoder'
+
+    def forward(self, inputs):
+
+        long_range1 = self.encoder_stage1(inputs) + inputs
+
+        short_range1 = self.down_conv1(long_range1)
+
+        long_range2 = self.encoder_stage2(short_range1) + short_range1
+        long_range2 = F.dropout(long_range2, self.dorp_rate, self.training)
+
+        short_range2 = self.down_conv2(long_range2)
+
+        long_range3 = self.encoder_stage3(short_range2) + short_range2
+        long_range3 = F.dropout(long_range3, self.dorp_rate, self.training)
+
+        short_range3 = self.down_conv3(long_range3)
+
+        long_range4 = self.encoder_stage4(short_range3) + short_range3
+        long_range4 = F.dropout(long_range4, self.dorp_rate, self.training)
+
+        short_range4 = self.down_conv4(long_range4)
+
+        return short_range4
+
+class Sample(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.param = nn.Parameter(torch.ones(1,2,3, dtype=torch.float32))
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return self.param * input
+
+if __name__ == '__main__':
+    net = ResUNet()
+    down = ResUNet_Down()
+    keys = set(down.state_dict().keys())
+    down.load_state_dict({k:v for k,v in net.state_dict().items() if k in keys})
+    
