@@ -4,6 +4,7 @@
 # Created by Kai Ma (makai0324@gmail.com)
 # ------------------------------------------------------------------------------
 import os
+from sre_constants import JUMP
 
 from tabnanny import verbose 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
@@ -12,6 +13,8 @@ from lib.config.config import cfg_from_yaml, cfg, merge_dict_and_yaml, print_eas
 from lib.dataset.factory import get_dataset
 from lib.model.factory import get_model
 from lib.model.multiView_AutoEncoder import ResUNet
+from lib.model.multiView_AutoEncoder import ResUNet_Down
+from lib.model.multiView_AutoEncoder import ResUNet_up
 import copy
 import torch
 import time
@@ -63,7 +66,7 @@ def parse_args():
   return args
 
 if __name__ == '__main__':
-  #sys.stdout = Logger()
+  
 
 
   args = parse_args()
@@ -103,6 +106,7 @@ if __name__ == '__main__':
   if args.valid_dataset is not None:
     valid_opt = copy.deepcopy(opt)
     valid_opt.data_augmentation = dataTestClass
+   
     valid_opt.datasetfile = opt.valid_datasetfile
 
 
@@ -120,6 +124,7 @@ if __name__ == '__main__':
     valid_dataloader = None
 
   # get dataset
+
   dataset = datasetClass(opt)
   print('DataSet is {}'.format(dataset.name))
   dataloader = torch.utils.data.DataLoader(
@@ -135,7 +140,11 @@ if __name__ == '__main__':
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   autoencoder = ResUNet(in_channel=1,out_channel=1,training=True).to(device)
-  print(autoencoder)
+  auto_down = ResUNet_Down(in_channel = 1, out_channel=256).to(device)
+  
+  #print(autoencoder)
+  #print(auto_down)
+  
 
   autoencoder.train()
 
@@ -155,7 +164,7 @@ if __name__ == '__main__':
   #  
   pretrain_auto["optimizer"] = optim.Adam(autoencoder.parameters(),lr=0.00005)
 
-  pretrain_auto["scheduler"] = optim.lr_scheduler.ExponentialLR(pretrain_auto["optimizer"],gamma=0.7, verbose=True)
+  pretrain_auto["scheduler"] = optim.lr_scheduler.ExponentialLR(pretrain_auto["optimizer"],gamma=0.4, verbose=True)
   #pretrain_auto["scheduler"] = optim.lr_scheduler.LamdaLR(pretrain_auto["optimizer"],batch_learn)
 
 
@@ -167,12 +176,19 @@ if __name__ == '__main__':
     num_workers=int(opt.nThreads),
     collate_fn=collateClass)
 
+  predicts = None
+  #remove below line when not debugging
+  pretrain_auto["epoch"] = 1
+  template = None
+  
   
   #pretraining of autoencoder
   for epoch in range(pretrain_auto["epoch"]):
       correct = 0
       for i, data in enumerate(dataloader_auto):
         X = data[0]
+        if template == None:
+          template = data[3][0]
         #print(X)
         X = torch.unsqueeze(X,1)
         #print("fieeeeeem" + str(torch.sum(X)))
@@ -192,11 +208,37 @@ if __name__ == '__main__':
         pretrain_auto["optimizer"].step()
         if i % pretrain_auto["batch"] == 0:
           print("\n Epoch: {}, Loss: {}, Batch {}\n ".format(epoch, loss.item(),i))
+          break
       pretrain_auto["scheduler"].step()
 
 
-        
+  
+  template = template.to(device)
 
+  template = torch.unsqueeze(template,dim=0)
+  template = torch.unsqueeze(template,dim=0)
+  keys = set(auto_down.state_dict().keys())
+  auto_down.load_state_dict({k:v for k,v in autoencoder.state_dict().items() if k in keys})
+  feature_map = auto_down(template)
+  dim = feature_map.size()[2]
+  #print(feature_map.size())
+  #print(dim)
+  
+  auto_up = ResUNet_up(in_channel=256,out_channel=1,dim= dim).to(device)
+
+  output = auto_up(feature_map)
+
+
+
+
+
+  
+  #print(feature_map)
+  #print("SUM of feature map: {}".format(torch.sum(feature_map)))
+  exit()
+
+  
+  
  
 
   # get model
