@@ -402,4 +402,10 @@ class CTGAN(Base_Model):
     self.backward_D()
     self.optimizer_D.step()
 
+  def get_prediction(self):
+    return self.G_fake
+  
+  def get_real(self):
+    return self.G_real
+
 

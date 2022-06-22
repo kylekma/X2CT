@@ -178,7 +178,7 @@ if __name__ == '__main__':
 
   predicts = None
   #remove below line when not debugging
-  pretrain_auto["epoch"] = 1
+  pretrain_auto["epoch"] = 3
   template = None
   
   
@@ -235,7 +235,7 @@ if __name__ == '__main__':
   
   #print(feature_map)
   #print("SUM of feature map: {}".format(torch.sum(feature_map)))
-  exit()
+  #exit() HERE
 
   
   

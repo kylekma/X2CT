@@ -11,14 +11,21 @@ import torch.nn.functional as F
 from lib.model.base_model import Base_Model
 import lib.model.nets.factory as factory
 
+
+
+
 class ResUNet_up(nn.Module):
-    def __init__(self,in_channel=256,out_channel=1,dim = 16,training=True):
+    #dim=16
+    def __init__(self,in_channel=256,out_channel=1,training=True):
         super(ResUNet_up,self).__init__()
+        self.w = torch.nn.Parameter(torch.tensor([0.5,0.5]))
         self.drop_rate = 0.2
         self.training = training
         #dim = int(in_channel*(dim**3))
         #print("fiem")
         #print(dim)
+        self.calibration = nn.Linear(2,2)
+
         self.down_conv = nn.Sequential(
             nn.Conv3d(in_channel,int(in_channel/2),kernel_size=3,stride=1,padding=1),
             nn.PReLU(int(in_channel/2)),
@@ -82,7 +89,7 @@ class ResUNet_up(nn.Module):
         
 
         
-    def forward(self,X):
+    def forward(self,X,pred_G):
         X = self.down_conv(X)
         #X = F.softmax(X,dim=1)
        #X.size() = torch.Size([1, 128, 8, 8, 8])
@@ -105,10 +112,15 @@ class ResUNet_up(nn.Module):
 
         X = self.decoder_stage4(short_range8) + short_range8
         X = self.map4(X)
-
+        print(self.w.size())
+        
+        #w = self.calibration(self.w)
+        w = F.softmax(self.w,dim=0)
+        #print("calibr weights: {}".format(self.w))
+        res = X*w[0] + pred_G * w[1]
         
 
-        return X
+        return res
         
         
 
