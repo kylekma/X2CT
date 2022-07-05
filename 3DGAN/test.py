@@ -92,6 +92,7 @@ def evaluate(args):
 
   # get dataset
   dataset = datasetClass(opt)
+  
   print('DataSet is {}'.format(dataset.name))
   dataloader = torch.utils.data.DataLoader(
     dataset,

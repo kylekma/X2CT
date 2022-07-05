@@ -12,11 +12,14 @@ from lib.model.factory import get_model
 from lib.model.multiView_AutoEncoder import ResUNet
 from lib.model.multiView_AutoEncoder import ResUNet_Down
 from lib.model.multiView_AutoEncoder import ResUNet_up
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator
 import copy
 import torch
 import time
 import torch.optim as optim
-import tqdm
+
 
 def parse_args():
     parse = argparse.ArgumentParser(description='CTGAN')
@@ -55,6 +58,8 @@ def parse_args():
     #parse.add_argument('--pretrain', action=argparse.BooleanOptionalAction)
     parse.add_argument('--pretrain',default="0", dest='pretrain', type=str ,
                         help='if specified, pretrains autoencoder. If not trains pretrained models')
+    #parse.add_argument('--model_to_train',default="0", dest='model_to_train', type=str ,
+     #                   help='select model to train, decodeCorrection or decodeGroundTruth')
     args = parse.parse_args()
     return args
 
@@ -95,11 +100,17 @@ if __name__ == '__main__':
     # merge config with argparse
     opt = copy.deepcopy(cfg)
     opt = merge_dict_and_yaml(args.__dict__, opt)
-    if opt.pretrain == True:
-        print_easy_dict(opt)
+    
+    print_easy_dict(opt)
+    
 
     opt.pretrain = str2bool(opt.pretrain)
     print("Pretraining: {} ".format(opt.pretrain))
+    #if opt.model_to_train == "0" and opt.pretrain == False:
+    #    print("Please select model to train: decodeCorrection or decodeGroundTruth")
+    #    exit(0)
+    #opt.model_to_train = opt.model_to_train.lower()
+
     
 
     
@@ -112,6 +123,7 @@ if __name__ == '__main__':
     
 
     feature_map_path = os.path.join(opt.MODEL_SAVE_PATH,"feature_map")
+    
     #print(feature_map_path)
     
 
@@ -131,51 +143,54 @@ if __name__ == '__main__':
     
 
     pretrain_auto = {}
+    pretrain_auto["lr"] = lr=0.00075
     pretrain_auto["alpha"] = 0.4
-    pretrain_auto["epoch"] = 3
+    pretrain_auto["epoch"] = 25
     #first batch size was 30
-    pretrain_auto["batch"] = 35
+    pretrain_auto["batch-print"] = 35
+    pretrain_auto["batch_size"] = 5
     pretrain_auto["loss"] = torch.nn.L1Loss().to(device)
     #Gamma for next three items are 0.9
     #0.0001 err 0.0744 epoch 0 batch 30
     #0.00001 err 0.06 ep 0 batch 30 0.05-0.07
     #lr = 0.0005 batch 35 err 0.043-0.05
-    #  
-    pretrain_auto["optimizer"] = optim.Adam(autoencoder.parameters(),lr=0.00005)
 
-    pretrain_auto["scheduler"] = optim.lr_scheduler.ExponentialLR(pretrain_auto["optimizer"],gamma=0.4, verbose=True)
+    #  for batch size 1, lr=0.00005
+    pretrain_auto["optimizer"] = optim.Adam(autoencoder.parameters(),lr=0.00075)
+
+    pretrain_auto["scheduler"] = optim.lr_scheduler.ExponentialLR(pretrain_auto["optimizer"],gamma=0.6, verbose=True)
     #pretrain_auto["scheduler"] = optim.lr_scheduler.LamdaLR(pretrain_auto["optimizer"],batch_learn)
     if opt.pretrain == True:
         print(autoencoder)
 
-    
-
-
+    print("figs path: {}".format(os.path.join(opt.MODEL_SAVE_PATH,"figs","autoencoder","train")))
 
     dataloader_auto = torch.utils.data.DataLoader(
         dataset,
-        batch_size= 1,
+        batch_size= pretrain_auto['batch_size'],
         shuffle=True,
         num_workers=int(opt.nThreads),
         collate_fn=collateClass)
-
+    avg_losses = []
+    lr_list = []
     predicts = None
-    #remove below line when not debugging
-    pretrain_auto["epoch"] = 2
+   
     template = None
-
+    pretrain_auto["running_loss"] = 0.0
+    curr_lr = 0
     #if pretrian != None
     if opt.pretrain == True:
     #pretraining of autoencoder
         for epoch in range(pretrain_auto["epoch"]):
+            pretrain_auto["running_loss"] = 0.0
             correct = 0
             for i, data in enumerate(dataloader_auto):
                 X = data[0]
                 if template == None:
                     template = data[3][0]
-                    #print(X)
+                    
                 X = torch.unsqueeze(X,1)
-                    #print("fieeeeeem" + str(torch.sum(X)))
+                    
                 X = X.to(device)
 
                 pretrain_auto["optimizer"].zero_grad()
@@ -187,17 +202,25 @@ if __name__ == '__main__':
                 loss2 = pretrain_auto["loss"](predicts[2],X)
                 loss3 = pretrain_auto["loss"](predicts[3],X)
                 #print("\n loss0: {}, loss1: {}, loss2: {}, loss3: {} \n".format(loss0.item(),loss1.item(),loss2.item(),loss3.item()))
-                loss = loss3 + pretrain_auto["alpha"] *(loss0 + loss1 + loss2)
+                loss = loss3 + (pretrain_auto["alpha"] *(loss0 + loss1 + loss2))
                 loss.backward()
                 pretrain_auto["optimizer"].step()
-                if i % pretrain_auto["batch"] == 0:
+                pretrain_auto["running_loss"] = pretrain_auto["running_loss"] + loss.item()
+                if i % pretrain_auto["batch-print"] == 0:
                     print("\n Epoch: {}, Loss: {}, Batch {}\n ".format(epoch, loss.item(),i))
-                    break
+            curr_lr = pretrain_auto["scheduler"].optimizer.param_groups[0]['lr']
             pretrain_auto["scheduler"].step()
+            avg_loss = pretrain_auto["running_loss"]/len(dataloader_auto)
+            avg_losses.append(avg_loss)
+            lr_list.append(curr_lr)
+
+            
+
+
         
 
         
-            
+        
         template = template.to(device)
 
         template = torch.unsqueeze(template,dim=0)
@@ -205,25 +228,91 @@ if __name__ == '__main__':
         keys = set(auto_down.state_dict().keys())
         auto_down.load_state_dict({k:v for k,v in autoencoder.state_dict().items() if k in keys})
         print(auto_down)
-        feature_map = auto_down(template)
+        feature_map,long_range1, long_range2, long_range3, long_range4 = auto_down(template)
         dim = feature_map.size()[2] 
         #print(feature_map.size())
         #print(dim)
-        if os.path.isfile(os.path.join(feature_map_path,"feature_map.pt")):
-            os.remove(os.path.join(feature_map_path,"feature_map.pt"))
-        
         file_path = os.path.join(feature_map_path,"feature_map.pt")
+        long_range1_path = os.path.join(feature_map_path,"long_range1.pt")
+        long_range2_path = os.path.join(feature_map_path,"long_range2.pt")
+        long_range3_path = os.path.join(feature_map_path,"long_range3.pt")
+        long_range4_path = os.path.join(feature_map_path,"long_range4.pt")
+        autoencoder_figs_path = os.path.join(opt.MODEL_SAVE_PATH,"figs","autoencoder","train")
+        avg_loss_path = os.path.join(autoencoder_figs_path,"avg-loss.png")
+        lr_path = os.path.join(autoencoder_figs_path,"lr.png")
         
+        
+        autoencoder_path = os.path.join(opt.MODEL_SAVE_PATH,"autoencoder.pt")
+        auto_down_path = os.path.join(opt.MODEL_SAVE_PATH,"auto_down.pt")
+
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+        if os.path.isfile(long_range1_path):
+            os.remove(long_range1_path)
+        if os.path.isfile(long_range2_path):
+            os.remove(long_range2_path)
+        if os.path.isfile(long_range3_path):
+            os.remove(long_range3_path)
+        if os.path.isfile(long_range4_path):
+            os.remove(long_range4_path)
+        if os.path.isfile(avg_loss_path):
+            os.remove(avg_loss_path)
+        if os.path.isfile(lr_path):
+            os.remove(lr_path)
+        if os.path.isfile(autoencoder_path):
+            os.remove(autoencoder_path)
+        if os.path.isfile(auto_down_path):
+            os.remove(auto_down_path)
+        
+
+        
+
+        
+
         torch.save(feature_map,file_path)
+        torch.save(long_range1,long_range1_path)
+        torch.save(long_range2,long_range2_path)
+        torch.save(long_range3,long_range3_path)
+        torch.save(long_range4,long_range4_path)
+        torch.save(autoencoder.state_dict(),autoencoder_path)
+        torch.save(auto_down.state_dict(),auto_down_path)
+
+        fg_loss = Figure()
+        ax_loss = fg_loss.gca()
+        ax_loss.plot(avg_losses)
+        ax_loss.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax_loss.set_xlabel('epochs', fontsize=10)
+        ax_loss.set_ylabel('avg-loss', fontsize='medium')
+        
+        fg_loss.savefig(avg_loss_path)
+
+        fg_lr = Figure()
+        ax_lr = fg_lr.gca()
+        ax_lr.plot(lr_list)
+        ax_lr.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax_lr.set_xlabel('epochs', fontsize=10)
+        ax_lr.set_ylabel('lr', fontsize='medium')
+        
+        fg_lr.savefig(lr_path)
+
         exit()
     else:
         
-
+        #create Template
 
         
-        feature_map = torch.load(feature_map_path +"\\feature_map.pt")
+        auto_down_path = os.path.join(opt.MODEL_SAVE_PATH,"auto_down.pt")
+        auto_down = ResUNet_Down(in_channel = 1, out_channel=256).to(device)
+        auto_down_weights = torch.load(auto_down_path)
+        auto_down.load_state_dict(auto_down_weights)
+
+        #feature_map = torch.load(feature_map_path +"\\feature_map.pt")
+        #long_range1 = torch.load(feature_map_path +"\\long_range1.pt")
+        #long_range2 = torch.load(feature_map_path +"\\long_range2.pt")
+        #long_range3 = torch.load(feature_map_path +"\\long_range3.pt")
+        #long_range4 = torch.load(feature_map_path +"\\long_range4.pt")
         #w = torch.tensor([0.5,0.5],requires_grad=False).to(device)
-        auto_up = ResUNet_up(in_channel=256,out_channel=1).to(device)
+        auto_up = ResUNet_up(in_channel=1,out_channel=1, training=True, pretrained = auto_down).to(device)
        
             
         print(auto_up)
@@ -267,127 +356,96 @@ if __name__ == '__main__':
         result_dir = os.path.join(opt.resultdir, opt.data, '%s_%s' % (opt.dataset, opt.check_point))
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
+        
 
         avg_dict = dict()
-
+    
         epochs = 1
-        
+        batch_size = 5
+        lr = 0.00015
+        gamma = 0.4
+        running_loss = 0.0
+        curr_lr = 0.0
+        avg_losses = []
+        lr_list = []
+        encoder_fmap = torch.empty()
+        decoder_fmap = torch.empty()
         
         loss = torch.nn.L1Loss().to(device)
-        optimizer = optim.Adam(auto_up.parameters(),lr=0.00005)
+        optimizer = optim.Adam(auto_up.parameters(),lr)
 
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.4, verbose=True)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer,gamma, verbose=True)
         
-
         dataloader_decoder = torch.utils.data.DataLoader(
         dataset,
-        batch_size= 10,
+        batch_size= batch_size,
         shuffle=True,
         num_workers=int(opt.nThreads),
         collate_fn=collateClass)
 
 
+        #Train decodeCorrection
+    
 
         for epoch in range(epochs):
+            running_loss = 0.0
             for i,data in enumerate(dataloader_decoder):
-
-            #maybe turn of grad on data
-                if epoch == 1:
-                    print(data)
-                    print(data.size())
-                
-
-                
-
                 
                 gan_model.set_input(data)
                 gan_model.test()
                 visuals = gan_model.get_current_visuals()
                 img_path = gan_model.get_image_paths()
                 pred_G = gan_model.get_prediction()
-                pred_res = auto_up(feature_map,pred_G=pred_G)
+                #template =
+                pred_res, encoder_fmap, decoder_fmap= auto_up(template)
                 gt= gan_model.get_real()
+                pred_res = torch.squeeze(pred_res,dim=0)
                 optimizer.zero_grad()
-                #wreap auto_up and FC layer for weight calibration
-                #in the same class and add  self.weights = torch.nn.parameter.Parameter(weights) to it
-                #Or just implement everything in auto_up class
+                print("gt: {}".format(gt.size()))
+                print("pred {}".format(pred_res.size()))
                 cost = loss(gt,pred_res)
                 cost.backward()
                 optimizer.step()
-                #auto_up.w = auto_up.w.detach()
-                print("W", auto_up.w.shape)
-                print(auto_up.w)
-                print("error: {}\n".format(cost.item()))
+                #print("W: {}".format(auto_up.w))
+                print("\n Epoch: {}, Loss: {}, Batch {}\n ".format(epoch, cost.item(),i))
+            curr_lr = scheduler.optimizer.param_groups[0]['lr']
             scheduler.step()
+            avg_loss = running_loss/len(dataloader_auto)
+            avg_losses.append(avg_loss)
+            lr_list.append(curr_lr)
+
+        feature_map_path = os.path.join(opt.MODEL_SAVE_PATH,"feature_map")
+        auto_up_path = os.path.join(opt.MODEL_SAVE_PATH,"auto_down.pt")
+        encoder_fmap_path = os.path.join(feature_map_path,"encoder_fmap.pt")
+        decoder_fmap_path = os.path.join(feature_map_path,"decoder_fmap.pt")
 
 
-
+        if os.path.isfile(auto_up_path):
+            os.remove(auto_up_path)
+        if os.path.isfile(encoder_fmap_path):
+            os.remove(encoder_fmap_path)
+        if os.path.isfile(decoder_fmap_path):
+            os.remove(decoder_fmap_path)
 
         
-        #print(pred)
-        #print(torch.sum(pred))
+        torch.save(auto_up.state_dict(),auto_up_path)
+        torch.save(encoder_fmap,encoder_fmap_path)
+        torch.save(decoder_fmap,decoder_fmap_path)
+
+        #save encoder_fmap and decoder_fmap on disk
+
+
+            
+
+           
 
 
 
-        """
-        #
-        # Evaluate Part
-        #
-        generate_CT = visuals['G_fake'].data.clone().cpu().numpy()
-        real_CT = visuals['G_real'].data.clone().cpu().numpy()
-        # To [0, 1]
-        # To NDHW
-        if 'std' in opt.dataset_class or 'baseline' in opt.dataset_class:
-            generate_CT_transpose = generate_CT
-            real_CT_transpose = real_CT
-        else:
-            generate_CT_transpose = np.transpose(generate_CT, (0, 2, 1, 3))
-            real_CT_transpose = np.transpose(real_CT, (0, 2, 1, 3))
-        generate_CT_transpose = tensor_back_to_unnormalization(generate_CT_transpose, opt.CT_MEAN_STD[0],
-                                                            opt.CT_MEAN_STD[1])
-        real_CT_transpose = tensor_back_to_unnormalization(real_CT_transpose, opt.CT_MEAN_STD[0], opt.CT_MEAN_STD[1])
-        # clip generate_CT
-        generate_CT_transpose = np.clip(generate_CT_transpose, 0, 1)
 
-        # CT range 0-1
-        mae0 = MAE(real_CT_transpose, generate_CT_transpose, size_average=False)
-        mse0 = MSE(real_CT_transpose, generate_CT_transpose, size_average=False)
-        cosinesimilarity = Cosine_Similarity(real_CT_transpose, generate_CT_transpose, size_average=False)
-        ssim = Structural_Similarity(real_CT_transpose, generate_CT_transpose, size_average=False, PIXEL_MAX=1.0)
-        # CT range 0-4096
-        generate_CT_transpose = tensor_back_to_unMinMax(generate_CT_transpose, opt.CT_MIN_MAX[0], opt.CT_MIN_MAX[1]).astype(np.int32)
-        real_CT_transpose = tensor_back_to_unMinMax(real_CT_transpose, opt.CT_MIN_MAX[0], opt.CT_MIN_MAX[1]).astype(np.int32)
-        psnr_3d = Peak_Signal_to_Noise_Rate_3D(real_CT_transpose, generate_CT_transpose, size_average=False, PIXEL_MAX=4095)
-        psnr = Peak_Signal_to_Noise_Rate(real_CT_transpose, generate_CT_transpose, size_average=False, PIXEL_MAX=4095)
-        mae = MAE(real_CT_transpose, generate_CT_transpose, size_average=False)
-        mse = MSE(real_CT_transpose, generate_CT_transpose, size_average=False)
 
-        name1 = os.path.splitext(os.path.basename(img_path[0][0]))[0]
-        name2 = os.path.split(os.path.dirname(img_path[0][0]))[-1]
-        name = name2 + '_' + name1
-        print(cosinesimilarity, name)
-        if cosinesimilarity is np.nan or cosinesimilarity > 1:
-            print(os.path.splitext(os.path.basename(gan_model.get_image_paths()[0][0]))[0])
-            continue
 
-        metrics_list = [('MAE0', mae0), ('MSE0', mse0), ('MAE', mae), ('MSE', mse), ('CosineSimilarity', cosinesimilarity),
-                        ('psnr-3d', psnr_3d), ('PSNR-1', psnr[0]),
-                        ('PSNR-2', psnr[1]), ('PSNR-3', psnr[2]), ('PSNR-avg', psnr[3]),
-                        ('SSIM-1', ssim[0]), ('SSIM-2', ssim[1]), ('SSIM-3', ssim[2]), ('SSIM-avg', ssim[3])]
 
-        for key, value in metrics_list:
-            if avg_dict.get(key) is None:
-                avg_dict[key] = [] + value.tolist()
-            else:
-                avg_dict[key].extend(value.tolist())
-
-        del visuals, img_path
-
-for key, value in avg_dict.items():
-    print('### --{}-- total: {}; avg: {} '.format(key, len(value), np.round(np.mean(value), 7)))
-    avg_dict[key] = np.mean(value)
-
-    """
+      
 
 
 

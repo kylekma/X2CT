@@ -142,8 +142,7 @@ class CTGAN(Base_Model):
     self.G_input1 = input[1][0].to(self.device)
     self.G_input2 = input[1][1].to(self.device)
     #template is the pretraining template
-    template = input[3][0]
-    template = torch.tensor(template)
+    template = input[3][0].clone().detach()
     template = torch.unsqueeze(template,dim=0)
     template = template.to(self.device)
     #Set input from Autoencoder for the finetuning stage

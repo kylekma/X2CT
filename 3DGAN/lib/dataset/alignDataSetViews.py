@@ -105,6 +105,7 @@ class AlignDataSet(Base_DataSet):
   def pull_item(self, item):
     file_path = self.get_image_path(self.dir_root, self.dataset_paths[item]) 
     ct_data, x_ray1, x_ray2 = self.load_file(file_path)
+    #print(file_path)
     #print(template_data)
     #for idx, e in enumerate(x_ray2):
     #    print("Xray " + str(idx) + "\n")

@@ -60,6 +60,7 @@ class AlignDataSet(Base_DataSet):
   def pull_item(self, item):
     file_path = self.get_image_path(self.dir_root, self.dataset_paths[item])
     ct_data, x_ray1 = self.load_file(file_path)
+    print(file_path)
 
     # Data Augmentation
     ct, xray1 = self.data_augmentation([ct_data, x_ray1])
